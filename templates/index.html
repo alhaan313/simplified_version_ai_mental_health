@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MindSentry Nova – Sentiment Analysis</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            text-align: center;
+            animation: fadeIn 1.5s ease;
+        }
+
+        h1 {
+            color: #00BFFF;
+            margin-bottom: 20px;
+            font-size: 26px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            resize: none;
+            font-size: 16px;
+            background: #1e1e2f;
+            color: white;
+            outline: none;
+        }
+
+        button {
+            margin-top: 15px;
+            background: #00BFFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #00aee0;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #aad2ff;
+        }
+        #spinner {
+            display: none;
+            margin: 15px auto;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #00BFFF;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .waveform {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .bar {
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            margin: 0 1px;
+            background-color: #00BFFF;
+            animation: bounce 1s infinite ease-in-out;
+        }
+
+        .bar:nth-child(2) { animation-delay: 0.1s; }
+        .bar:nth-child(3) { animation-delay: 0.2s; }
+        .bar:nth-child(4) { animation-delay: 0.3s; }
+
+        @keyframes bounce {
+            0%, 100% { height: 20px; }
+            50% { height: 40px; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🧠 MindSentry Nova</h1>
+        <p>Analyze your thoughts using AI-powered sentiment analysis.</p>
+        <textarea id="text-input" placeholder="Type something you're feeling..."></textarea><br>
+        <div id="spinner"></div>
+        <div class="waveform" id="waveform">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+        <button onclick="analyzeText()">Analyze</button>
+        <p>Or speak directly:</p>
+        <button id="record-btn" onclick="toggleRecording()">🎙 Start Recording</button>
+        <hr style="margin: 20px 0; border-color: rgba(255,255,255,0.1)">
+        <p>Or upload a voice note for analysis:</p>
+        <input type="file" id="audio-input" accept="audio/*">
+        <button onclick="uploadAudio()">📤 Upload & Analyze</button>
+
+        <p id="result"></p>
+    </div>
+
+    <script>
+        async function analyzeText() {
+            const text = document.getElementById("text-input").value;
+            const spinner = document.getElementById("spinner");
+            const resultEl = document.getElementById("result");
+
+            spinner.style.display = "block";
+            resultEl.innerText = "";
+
+            const response = await fetch("http://127.0.0.1:8000/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text })
+            });
+
+            const data = await response.json();
+            spinner.style.display = "none";
+            resultEl.innerText = `Sentiment: ${data.sentiment.toUpperCase()} (Confidence: ${data.confidence})`;
+        }
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        async function toggleRecording() {
+            const recordBtn = document.getElementById("record-btn");
+            const waveform = document.getElementById("waveform");
+            const spinner = document.getElementById("spinner");
+            const resultEl = document.getElementById("result");
+
+            if (!isRecording) {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    waveform.style.display = "none";
+                    spinner.style.display = "block";
+                    resultEl.innerText = "Transcribing your speech...";
+
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const formData = new FormData();
+                    formData.append("file", audioBlob, "voice_input.webm");
+
+                    const response = await fetch("http://127.0.0.1:8000/transcribe/", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    const transcript = data.transcription;
+
+                    spinner.style.display = "none";
+                    document.getElementById("text-input").value = transcript;
+                    resultEl.innerText = `You said: "${transcript}"`;
+
+                    analyzeText();
+                    audioChunks = [];
+                };
+
+                audioChunks = [];
+                mediaRecorder.start();
+                waveform.style.display = "block";
+                recordBtn.innerText = "🛑 Stop Recording";
+                isRecording = true;
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                document.getElementById("record-btn").innerText = "🎙 Start Recording";
+            }
+        }
+
+        async function uploadAudio() {
+            const fileInput = document.getElementById("audio-input");
+            const spinner = document.getElementById("spinner");
+            const resultEl = document.getElementById("result");
+
+            if (fileInput.files.length === 0) {
+                alert("Please select an audio file.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            spinner.style.display = "block";
+            resultEl.innerText = "Transcribing audio...";
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/transcribe/", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to transcribe audio.");
+                }
+
+                const data = await response.json();
+                const transcript = data.transcription;
+
+                document.getElementById("text-input").value = transcript;
+                resultEl.innerText = `You said: "${transcript}"`;
+
+                analyzeText();
+            } catch (error) {
+                resultEl.innerText = "Error: Unable to transcribe audio.";
+                console.error(error);
+            } finally {
+                spinner.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
