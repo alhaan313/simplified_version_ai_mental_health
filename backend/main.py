@@ -27,6 +27,10 @@ class TextInput(BaseModel):
 def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/therapy", response_class=HTMLResponse)
+def therapy_page(request: Request):
+    return templates.TemplateResponse("therapy.html", {"request": request})
+
 @app.post("/analyze")
 def analyze_text(input: TextInput):
     return analyze_sentiment(input.text)
