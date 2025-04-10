@@ -1,22 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
-from transformers import pipeline
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
-import os
-import uvicorn
-from fastapi import UploadFile, File
-import whisper
-import os
+from .sentiment import analyze_sentiment
+from .transcription import transcribe_audio
 
-sentiment_pipeline = pipeline("sentiment-analysis")
-model = whisper.load_model("base")  # You can try "tiny", "small", "medium" too
 templates = Jinja2Templates(directory="templates")
 
 app = FastAPI()
+
 # CORS setup to allow frontend access
 app.add_middleware(
     CORSMiddleware,
@@ -25,8 +19,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Load sentiment pipeline (only once)
 
 class TextInput(BaseModel):
     text: str
@@ -37,24 +29,8 @@ def read_root(request: Request):
 
 @app.post("/analyze")
 def analyze_text(input: TextInput):
-    result = sentiment_pipeline(input.text)[0]
-    sentiment = result["label"].lower()  # e.g., 'POSITIVE' or 'NEGATIVE'
-    score = round(result["score"], 2)
-
-    return {"sentiment": sentiment, "confidence": score}
+    return analyze_sentiment(input.text)
 
 @app.post("/transcribe")
-async def transcribe_audio(file: UploadFile = File(...)):
-    try:
-        # Save uploaded audio to a temporary file
-        temp_path = f"temp_audio_{file.filename}"
-        with open(temp_path, "wb") as buffer:
-            buffer.write(await file.read())
-
-        # Transcribe using Whisper
-        result = model.transcribe(temp_path)
-        os.remove(temp_path)  # Clean up
-        print(result["text"])
-        return {"text": result["text"]}
-    except Exception as e:
-        return {"error": str(e)}
+async def transcribe_audio_endpoint(file: UploadFile = File(...)):
+    return transcribe_audio(file)
