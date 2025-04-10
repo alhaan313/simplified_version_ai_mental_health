@@ -29,8 +29,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
 from fastapi.staticfiles import StaticFiles
-from .sentiment import analyze_sentiment
-from .transcription import transcribe_audio
+from sentiment import analyze_sentiment
+from transcription import transcribe_audio
 
 templates = Jinja2Templates(directory="templates")
 
