@@ -1,3 +1,12 @@
+"""
+File: transcription.py
+Purpose: Handles audio transcription using the Whisper model.
+
+Flow:
+- Audio file is uploaded via the /transcribe endpoint in main.py.
+- This file processes the audio and returns the transcription.
+"""
+
 import whisper
 import os
 from fastapi import UploadFile

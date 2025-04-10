@@ -1,3 +1,7 @@
+"""
+File: run.py
+Purpose: Entry point to start the FastAPI application.
+"""
 import uvicorn
 
 if __name__ == "__main__":

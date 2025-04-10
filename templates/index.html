@@ -3,9 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>MindSentry Nova – Sentiment Analysis</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+    <!--
+    File: index.html
+    Purpose: The main landing page for the application.
+
+    Flow:
+    1. Provides UI for sentiment analysis and audio transcription.
+    2. Allows navigation to the therapy page and meeting rooms.
+    -->
     <div class="card">
         <h1>🧠 MindSentry Nova</h1>
         <p>Analyze your thoughts using AI-powered sentiment analysis.</p>
@@ -31,6 +39,15 @@
 
         <p id="result"></p>
     </div>
-    <script src="scripts.js"></script>
+
+    <div class="card">
+        <h2>🔗 Join a Support Room</h2>
+        <p>Feeling down? Join a room to connect with others who care.</p>
+        <input id="room-id" type="text" placeholder="Enter Room ID" />
+        <button onclick="navigateToRoom()">Join Room</button>
+    </div>
+
+    <script src="/static/scripts.js"></script>
+    <script src="/static/room-navigation.js"></script>
 </body>
 </html>

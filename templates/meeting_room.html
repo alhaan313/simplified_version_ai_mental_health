@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Meeting Room</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!--
+    File: meeting_room.html
+    Purpose: Provides the UI for the meeting room.
+
+    Flow:
+    - Accessed via the /meeting-room endpoint in main.py.
+    - Uses meeting-room.js for WebSocket communication.
+    -->
+    <div class="card">
+        <h2>💬 Meeting Room</h2>
+        <p id="room-info"></p>
+        <div id="messages" style="height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;"></div>
+        <input id="message-input" type="text" placeholder="Type a message..." />
+        <button onclick="sendMessage()">Send</button>
+        <button onclick="leaveRoom()">Leave Room</button>
+    </div>
+    <script src="/static/meeting-room.js"></script>
+</body>
+</html>

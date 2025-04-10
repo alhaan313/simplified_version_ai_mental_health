@@ -1,3 +1,22 @@
+/*
+File: scripts.js
+Purpose: Provides frontend functionality for sentiment analysis, audio transcription, and WebSocket chat.
+
+Flow:
+1. Sentiment Analysis:
+   - Text input is sent to the /analyze endpoint in main.py.
+   - Displays the sentiment result.
+
+2. Audio Transcription:
+   - Records or uploads audio.
+   - Sends the audio to the /transcribe endpoint in main.py.
+   - Displays the transcription and sentiment result.
+
+3. WebSocket Chat:
+   - Connects to the WebSocket endpoint (/ws/{room_id}) in main.py.
+   - Sends and receives messages in real-time.
+*/
+
 async function analyzeText() {
     const text = document.getElementById("text-input").value;
     const spinner = document.getElementById("spinner");
@@ -110,5 +129,42 @@ async function uploadAudio() {
         console.error(error);
     } finally {
         spinner.style.display = "none";
+    }
+}
+
+let socket;
+
+function joinRoom() {
+    const roomId = document.getElementById("room-id").value;
+    if (!roomId) {
+        alert("Please enter a Room ID.");
+        return;
+    }
+
+    socket = new WebSocket(`ws://127.0.0.1:8000/ws/${roomId}`);
+
+    socket.onopen = () => {
+        document.getElementById("chat-box").style.display = "block";
+        document.getElementById("messages").innerHTML = "Connected to room: " + roomId + "<br>";
+    };
+
+    socket.onmessage = (event) => {
+        const messages = document.getElementById("messages");
+        messages.innerHTML += event.data + "<br>";
+        messages.scrollTop = messages.scrollHeight; // Auto-scroll to the latest message
+    };
+
+    socket.onclose = () => {
+        alert("Disconnected from the room.");
+        document.getElementById("chat-box").style.display = "none";
+    };
+}
+
+function sendMessage() {
+    const messageInput = document.getElementById("message-input");
+    const message = messageInput.value;
+    if (message && socket) {
+        socket.send(message);
+        messageInput.value = ""; // Clear the input field
     }
 }
