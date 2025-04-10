@@ -112,6 +112,7 @@ async function toggleRecording() {
                     console.log("Transcribe Text:", transcribe_text);
                     
                     // Handle sentiment if available
+                    
                     if (data.sentiment) {
                         console.log("Sentiment:", data.sentiment);
                         resultEl.innerText += `\nSentiment: ${data.sentiment.sentiment.toUpperCase()} (Confidence: ${data.sentiment.confidence})`;

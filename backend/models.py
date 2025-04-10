@@ -31,7 +31,6 @@ class Therapy(Base):
     __tablename__ = "therapy"
     id = Column(Integer, primary_key=True, index=True)
     sentiment_score = Column(Float, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     audio = Column(String, nullable=True)
     video = Column(String, nullable=True)
     quotes = Column(String, nullable=True)
