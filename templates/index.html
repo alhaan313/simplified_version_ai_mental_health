@@ -1,41 +1,3 @@
-<!--<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>MindSentry Nova – Sentiment Analysis</title>
-    <link rel="stylesheet" href="/static/styles.css">
-</head>
-<body>
-    <div class="card">
-        <h1>MindSentry Nova</h1>
-        <p>Analyze your thoughts using AI-powered sentiment analysis.</p>
-        <textarea id="text-input" placeholder="Type something you're feeling..."></textarea><br>
-        <button onclick="analyzeText()">Analyze</button>
-        <div id="spinner"></div>
-
-
-
-        <button onclick="window.location.href='/therapy'">Therapy</button>
-        <button onclick="window.location.href='/meeting-room'">Meeting Room</button>
-
-
-
-        <button id="record-btn" onclick="toggleRecording()">Start Recording</button>
-        <input type="file" id="audio-input" accept="audio/*">
-        <button onclick="uploadAudio()">Upload & Analyze</button>
-       
-       
-        <div id="trans_text"></div>
-        <div id="result"></div>
-    </div>
-    <button onclick="window.location.href='/logout'">Logout</button>
-
-    <script src="/static/scripts.js"></script>
-
-</body>
-</html>
--->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -260,6 +222,12 @@
                 >
                     <span>🌌</span> Enter Therapy
                 </button>
+                <button
+                    onclick="window.location.href='/voice-chatbot'"
+                    class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 animate-[pulseGlow_3s_infinite]"
+                >
+                    🎙 Voice Chatbot
+                </button>
             </div>
         </section>
     </main>
@@ -279,7 +247,7 @@
 
     <script>
         // Section Navigation
-        const navTabs = document.querySelectorAll('.nav-tab');
+       const navTabs = document.querySelectorAll('.nav-tab');
         const sections = document.querySelectorAll('.section');
 
         navTabs.forEach(tab => {

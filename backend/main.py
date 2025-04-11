@@ -147,6 +147,25 @@ def ai_chat_page(request: Request):
     """
     return templates.TemplateResponse("ai_chat.html", {"request": request})
 
+@app.get("/voice-chatbot", response_class=HTMLResponse)
+def voice_chatbot_page(request: Request):
+    """
+    Serve the Voice Chatbot page.
+    """
+    return templates.TemplateResponse("voice_chatbot.html", {"request": request})
+
+@app.post("/api/ai-chat")
+async def voice_chat(input: TextInput):
+    """
+    Handle voice chat messages using the AI chat system.
+    """
+    try:
+        response_data = await get_ai_response(input.text, [])
+        return {"response": response_data["response"]}
+    except Exception as e:
+        print(f"Error in voice chat: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing voice chat response")
+
 # Post_request to analyze sentiment
 
 @app.post("/analyze")
@@ -201,6 +220,10 @@ USER_COLORS = ["#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF", "#33FFF5"]
 client_nicknames: Dict[str, Dict[WebSocket, tuple]] = {}
 # Example: client_nicknames = { "general": { websocket1: ("Ali", "#FF5733", [], False), websocket2: ("Sara", "#33FF57", [], True) } }
 
+async def broadcast_to_room(room_id: str, data: dict):
+    for client in connected_clients[room_id]:
+        await client.send_json(data)
+        
 @app.websocket("/ws/{room_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str = "general"):
     await websocket.accept()
@@ -224,7 +247,6 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str = "general"):
 
     # Notify the user if they are alone in the room
     is_alone = len(connected_clients[room_id]) == 1
-    print(len(connected_clients[room_id]))
     if is_alone:
         await websocket.send_json({
             "type": "system",
@@ -244,40 +266,13 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str = "general"):
         while True:
             message = await websocket.receive_text()
 
-            # Retrieve user data
-            _, _, message_history, ai_chat_mode = client_nicknames[room_id][websocket]
-
-            # Check if the user wants to start AI chat
-            if message.startswith("@ai"):
-                ai_chat_mode = True
-                client_nicknames[room_id][websocket] = (nickname, color, message_history, ai_chat_mode)
-                await websocket.send_json({
-                    "type": "system",
-                    "message": "AI chat mode activated. You can now chat with the AI without typing '@ai'.",
-                    "showAiOption": False
-                })
-                continue
-
-            # Handle AI chat if the user is in AI chat mode
-            if ai_chat_mode:
-                ai_response, updated_history = await get_ai_response(message, message_history)
-                client_nicknames[room_id][websocket] = (nickname, color, updated_history, ai_chat_mode)
-                await websocket.send_json({
-                    "type": "message",
-                    "nickname": "AI Assistant",
-                    "message": ai_response,
-                    "color": "#00BFFF",
-                    "isAI": True
-                })
-            else:
-                # Broadcast the message to all users in the room
-                await broadcast_to_room(room_id, {
-                    "type": "message",
-                    "nickname": nickname,
-                    "message": message,
-                    "color": color,
-                    "isAI": False
-                })
+            await broadcast_to_room(room_id, {
+                "type": "message",
+                "nickname": nickname,
+                "message": message,
+                "color": color,
+                "isAI": False
+            })
     except WebSocketDisconnect:
         connected_clients[room_id].remove(websocket)
         is_alone = len(connected_clients[room_id]) == 1
@@ -293,11 +288,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str = "general"):
             del connected_clients[room_id]
             del client_nicknames[room_id]
 
-async def broadcast_to_room(room_id: str, data: dict):
-    for client in connected_clients[room_id]:
-        await client.send_json(data)
 
-@app.post("/api/ai-chat")
 async def api_ai_chat(input: TextInput):
     """
     Handle AI chat messages.
@@ -308,3 +299,39 @@ async def api_ai_chat(input: TextInput):
     except Exception as e:
         print(f"Error in AI chat: {str(e)}")
         raise HTTPException(status_code=500, detail="Error processing AI response")
+
+
+audio_room_clients = {}
+@app.websocket("/ws/audio-room")
+async def audio_room_websocket(websocket: WebSocket):
+    await websocket.accept()
+    username = None
+    try:
+        while True:
+            data = await websocket.receive_json()
+            if data["type"] == "join":
+                username = data["username"]
+                audio_room_clients[username] = websocket
+                for client in audio_room_clients.values():
+                    await client.send_json({"type": "join", "username": username})
+                # Notify if the user is alone in the room
+                if len(audio_room_clients) == 1:
+                    await websocket.send_json({
+                        "type": "system",
+                        "message": "You're alone in the room. Would you like to chat with our AI chatbot?",
+                        "showAiOption": True
+                    })
+            elif data["type"] == "leave":
+                if username in audio_room_clients:
+                    del audio_room_clients[username]
+                    for client in audio_room_clients.values():
+                        await client.send_json({"type": "leave", "username": username})
+            else:
+                receiver = data.get("receiver")
+                if receiver in audio_room_clients:
+                    await audio_room_clients[receiver].send_json(data)
+    except WebSocketDisconnect:
+        if username in audio_room_clients:
+            del audio_room_clients[username]
+            for client in audio_room_clients.values():
+                await client.send_json({"type": "leave", "username": username})

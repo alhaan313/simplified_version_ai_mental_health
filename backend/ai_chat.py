@@ -16,7 +16,7 @@ async def get_ai_response(message: str, history: list = None) -> dict:
         if not history:
             history.append({
                 "role": "system",
-                "content": "You are a helpful and empathetic AI assistant focused on mental health support."
+                "content": "You are a compassionate AI assistant dedicated to providing supportive and insightful mental health guidance. Give the reply very breifly"
             })
             
         # Add the new user message

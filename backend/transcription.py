@@ -12,7 +12,7 @@ import os
 from fastapi import UploadFile
 
 # Load the Whisper model
-model = whisper.load_model("tiny")  # You can try "tiny", "small", "medium" too
+model = whisper.load_model("base")  # You can try "tiny", "small", "medium" too
 
 def transcribe_audio(file_path: str):
     try:

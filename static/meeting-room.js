@@ -32,7 +32,11 @@ function connectToRoom() {
     document.getElementById("room-info").innerText = `You are in room: ${roomId}`;
     socket = new WebSocket(`ws://127.0.0.1:8000/ws/${roomId}`);
 
+    // Debugging log to confirm socket initialization
+    console.log("Connecting to WebSocket...");
+
     socket.onopen = () => {
+        console.log("WebSocket connection established.");
         socket.send(nickname);
         const messages = document.getElementById("messages");
         const messageElement = document.createElement("div");
@@ -44,15 +48,17 @@ function connectToRoom() {
     };
 
     socket.onmessage = (event) => {
+        console.log("Message received:", event.data); // Debugging log
         const data = JSON.parse(event.data);
         const messages = document.getElementById("messages");
         const messageElement = document.createElement("div");
 
         if (data.type === "message") {
-            // Only append messages from other users or AI
-            if (!data.isAI && data.nickname === nickname) return;
+            // Ignore messages sent by the current user
+            if (data.nickname === nickname) return;
 
-            messageElement.className = data.isAI ? "message ai-message" : "message";
+            // Append all received messages to the chatbox
+            messageElement.className = data.isAI ? "message ai" : "message"; // Use "ai" class for AI messages
             const senderSpan = document.createElement("span");
             senderSpan.style.color = data.color;
             senderSpan.style.fontWeight = "bold";
@@ -63,6 +69,8 @@ function connectToRoom() {
 
             messageElement.appendChild(senderSpan);
             messageElement.appendChild(messageSpan);
+            messages.appendChild(messageElement);
+            messages.scrollTop = messages.scrollHeight; // Scroll to the latest message
         } else if (data.type === "join" || data.type === "leave") {
             if (data.nickname === nickname && data.type === "join") return; // Prevent duplicate join message for the current user
             messageElement.className = "system-message";
@@ -87,8 +95,13 @@ function connectToRoom() {
     };
 
     socket.onclose = () => {
+        console.log("WebSocket connection closed.");
         alert("Disconnected from the room.");
         window.location.href = "/";
+    };
+
+    socket.onerror = (error) => {
+        console.error("WebSocket error:", error);
     };
 }
 
@@ -123,4 +136,37 @@ function redirectToAiChat() {
 function stayInRoom() {
     const aiStatus = document.getElementById("ai-status");
     aiStatus.style.display = "none";
+}
+function redirectToNewAudioRoom() {
+    const username = prompt("Enter your name to join the audio room:");
+    if (!username) {
+        alert("Name is required to join the audio room.");
+        return;
+    }
+
+    const socket = new WebSocket("ws://127.0.0.1:8000/ws/audio-room");
+
+    socket.onopen = () => {
+        console.log("Connected to the audio room WebSocket.");
+        socket.send(JSON.stringify({ type: "join", username }));
+    };
+
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === "join") {
+            console.log(`${data.username} joined the audio room.`);
+        } else if (data.type === "leave") {
+            console.log(`${data.username} left the audio room.`);
+        } else if (data.type === "system") {
+            console.log(`System message: ${data.message}`);
+        }
+    };
+
+    socket.onclose = () => {
+        console.log("Disconnected from the audio room WebSocket.");
+    };
+
+    socket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+    };
 }
