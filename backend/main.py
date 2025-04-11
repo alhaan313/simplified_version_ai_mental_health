@@ -41,6 +41,7 @@ from passlib.context import CryptContext
 import os
 from typing import Dict, List
 from random import choice
+from .ai_chat import get_ai_response
 
 
 templates = Jinja2Templates(directory="templates")
@@ -139,6 +140,12 @@ def therapy_page(request: Request):
 def meeting_room(request: Request):
     return templates.TemplateResponse("meeting_room.html", {"request": request})
 
+@app.get("/ai-chat", response_class=HTMLResponse)
+def ai_chat_page(request: Request):
+    """
+    Serve the AI chat page.
+    """
+    return templates.TemplateResponse("ai_chat.html", {"request": request})
 
 # Post_request to analyze sentiment
 
@@ -190,9 +197,9 @@ connected_clients: Dict[str, List[WebSocket]] = {}
 # Add a list of colors for user names
 USER_COLORS = ["#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF", "#33FFF5"]
 
-# Room: Dict of WebSocket -> (nickname, color)
+# Room: Dict of WebSocket -> (nickname, color, message history, ai_chat_mode)
 client_nicknames: Dict[str, Dict[WebSocket, tuple]] = {}
-# Example: client_nicknames = { "general": { websocket1: ("Ali", "#FF5733"), websocket2: ("Sara", "#33FF57") } }
+# Example: client_nicknames = { "general": { websocket1: ("Ali", "#FF5733", [], False), websocket2: ("Sara", "#33FF57", [], True) } }
 
 @app.websocket("/ws/{room_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str = "general"):
@@ -203,26 +210,101 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str = "general"):
         client_nicknames[room_id] = {}
 
     nickname = await websocket.receive_text()
-    color = choice(USER_COLORS)  # Assign a random color
+    color = choice(USER_COLORS)
     connected_clients[room_id].append(websocket)
-    client_nicknames[room_id][websocket] = (nickname, color)
+    message_history = []  # Initialize empty history for this user
+    ai_chat_mode = False  # Track whether the user is in AI chat mode
+    client_nicknames[room_id][websocket] = (nickname, color, message_history, ai_chat_mode)
 
-    # Notify others
-    await broadcast_to_room(room_id, {"type": "join", "nickname": nickname, "color": color})
+    # Send a "connected" system message to the user
+    await websocket.send_json({
+        "type": "system",
+        "message": "Connected to the room.",
+    })
+
+    # Notify the user if they are alone in the room
+    is_alone = len(connected_clients[room_id]) == 1
+    print(len(connected_clients[room_id]))
+    if is_alone:
+        await websocket.send_json({
+            "type": "system",
+            "message": "You're alone in the room. Would you like to chat with our AI chatbot?",
+            "showAiOption": True
+        })
+
+    # Notify others about the new user
+    await broadcast_to_room(room_id, {
+        "type": "join",
+        "nickname": nickname,
+        "color": color,
+        "isAlone": is_alone
+    })
 
     try:
         while True:
             message = await websocket.receive_text()
-            await broadcast_to_room(room_id, {"type": "message", "nickname": nickname, "message": message, "color": color})
+
+            # Retrieve user data
+            _, _, message_history, ai_chat_mode = client_nicknames[room_id][websocket]
+
+            # Check if the user wants to start AI chat
+            if message.startswith("@ai"):
+                ai_chat_mode = True
+                client_nicknames[room_id][websocket] = (nickname, color, message_history, ai_chat_mode)
+                await websocket.send_json({
+                    "type": "system",
+                    "message": "AI chat mode activated. You can now chat with the AI without typing '@ai'.",
+                    "showAiOption": False
+                })
+                continue
+
+            # Handle AI chat if the user is in AI chat mode
+            if ai_chat_mode:
+                ai_response, updated_history = await get_ai_response(message, message_history)
+                client_nicknames[room_id][websocket] = (nickname, color, updated_history, ai_chat_mode)
+                await websocket.send_json({
+                    "type": "message",
+                    "nickname": "AI Assistant",
+                    "message": ai_response,
+                    "color": "#00BFFF",
+                    "isAI": True
+                })
+            else:
+                # Broadcast the message to all users in the room
+                await broadcast_to_room(room_id, {
+                    "type": "message",
+                    "nickname": nickname,
+                    "message": message,
+                    "color": color,
+                    "isAI": False
+                })
     except WebSocketDisconnect:
         connected_clients[room_id].remove(websocket)
-        await broadcast_to_room(room_id, {"type": "leave", "nickname": nickname, "color": color})
+        is_alone = len(connected_clients[room_id]) == 1
+        await broadcast_to_room(room_id, {
+            "type": "leave",
+            "nickname": nickname,
+            "color": color,
+            "isAlone": is_alone
+        })
         del client_nicknames[room_id][websocket]
 
-        if not connected_clients[room_id]:  # Clean up empty rooms
+        if not connected_clients[room_id]:
             del connected_clients[room_id]
             del client_nicknames[room_id]
 
 async def broadcast_to_room(room_id: str, data: dict):
     for client in connected_clients[room_id]:
         await client.send_json(data)
+
+@app.post("/api/ai-chat")
+async def api_ai_chat(input: TextInput):
+    """
+    Handle AI chat messages.
+    """
+    try:
+        response_data = await get_ai_response(input.text, [])
+        return {"response": response_data["response"]}
+    except Exception as e:
+        print(f"Error in AI chat: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing AI response")

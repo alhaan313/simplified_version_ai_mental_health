@@ -4,6 +4,27 @@
     <meta charset="UTF-8">
     <title>Meeting Room</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .ai-status {
+            padding: 8px;
+            margin: 8px 0;
+            background: rgba(0, 191, 255, 0.1);
+            border-radius: 8px;
+            display: block;
+        }
+        
+        .ai-message {
+            background: linear-gradient(135deg, #00bfff20, #00bfff40);
+            border-left: 3px solid #00bfff;
+        }
+
+        .system-message {
+            color: #00bfff;
+            text-align: center;
+            padding: 8px;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
     <!--
@@ -22,6 +43,11 @@
             <button onclick="setNickname()">Join Room</button>
         </div>
         <div id="chat-section" style="display: none;">
+            <div id="chatbot-prompt" class="system-message" style="display: none; text-align: center;">
+                <p>You're alone in the room. Would you like to chat with our AI chatbot?</p>
+                <button onclick="redirectToAiChat()">Chat with Chatbot</button>
+                <button onclick="stayInRoom()">Stay Here</button>
+            </div>
             <div id="messages" class="chat-box"></div>
             <div class="chat-input">
                 <input id="message-input" type="text" placeholder="Type a message..." onkeypress="handleEnter(event)" />
@@ -36,6 +62,39 @@
             if (event.key === "Enter") {
                 sendMessage();
             }
+        }
+
+        // Add AI chat hint to messages div when user is alone
+        const originalOnMessage = socket.onmessage;
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const messages = document.getElementById("messages");
+            
+            if (data.type === "system" && data.showAiOption) {
+                const aiHint = document.createElement("div");
+                aiHint.className = "system-message";
+                aiHint.innerHTML = `
+                    <div class="ai-hint">
+                        ${data.message}<br>
+                        <small>Example: @ai How are you today?</small>
+                    </div>
+                `;
+                messages.appendChild(aiHint);
+                messages.scrollTop = messages.scrollHeight;
+
+                // Show chatbot prompt
+                document.getElementById("chatbot-prompt").style.display = "block";
+            } else {
+                originalOnMessage(event);
+            }
+        };
+
+        function redirectToAiChat() {
+            window.location.href = "/ai-chat";
+        }
+
+        function stayInRoom() {
+            document.getElementById("chatbot-prompt").style.display = "none";
         }
     </script>
 </body>

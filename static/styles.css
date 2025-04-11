@@ -121,28 +121,53 @@ button:hover {
     border-radius: 10px;
     background: rgba(0, 0, 0, 0.5);
     margin-bottom: 10px;
+    display: flex;
+    flex-direction: column; /* Stack messages vertically */
+    align-items: flex-start; /* Align all messages to the left by default */
 }
 
-.chat-box .message {
-    margin: 5px 0;
-    padding: 8px 12px;
-    border-radius: 10px;
-    max-width: 70%;
-    word-wrap: break-word;
+#chatbot-prompt {
+    margin-bottom: 10px;
+    padding: 10px;
+    background: rgba(0, 191, 255, 0.1);
+    border-radius: 8px;
+    text-align: center;
+    font-style: italic;
 }
 
-.chat-box .message.user {
-    background-color: #00BFFF;
-    color: white;
-    margin-left: auto;
-    text-align: right;
+.message {
+    display: flex; /* Use flexbox for better alignment */
+    flex-direction: row; /* Arrange spans in a row */
+    align-items: flex-start; /* Align spans to the top-left of the container */
+    text-align: left; /* Ensure text is left-aligned */
+    background-color: #f1f1f1; /* Light background for general messages */
+    color: #333; /* Dark text for contrast */
+    padding: 10px; /* Add padding inside the message box */
+    border-radius: 8px; /* Rounded corners for the message box */
+    margin-bottom: 10px; /* Add spacing between messages */
+    max-width: 70%; /* Limit the width of the message box */
+    word-wrap: break-word; /* Ensure long words wrap properly */
+    gap: 5px; /* Add spacing between spans */
 }
 
-.chat-box .message.other {
-    background-color: #1e1e2f;
-    color: white;
-    margin-right: auto;
-    text-align: left;
+.message span {
+    text-align: left; /* Ensure text inside spans is left-aligned */
+    margin: 0; /* Remove any default margin */
+    padding: 0; /* Remove any default padding */
+}
+
+.message.user {
+    background-color: #d1e7dd; /* Light green background for user messages */
+    align-self: flex-end; /* Align user messages to the right */
+    text-align: right; /* Right-align text for user messages */
+    color: #155724; /* Dark green text for contrast */
+}
+
+.message.ai {
+    background-color: #f8d7da; /* Light red background for AI messages */
+    align-self: flex-start; /* Align AI messages to the left */
+    text-align: left; /* Left-align text for AI messages */
+    color: #721c24; /* Dark red text for contrast */
 }
 
 .chat-input {
@@ -171,7 +196,7 @@ button:hover {
     font-size: 16px;
 }
 
-.chat-input button {
+chat-input button {
     padding: 10px 20px;
     border-radius: 10px;
     background: #00BFFF;
@@ -181,6 +206,6 @@ button:hover {
     transition: background 0.3s ease;
 }
 
-.chat-input button:hover {
+chat-input button:hover {
     background: #00aee0;
 }

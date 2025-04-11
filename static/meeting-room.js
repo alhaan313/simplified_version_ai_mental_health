@@ -34,23 +34,25 @@ function connectToRoom() {
 
     socket.onopen = () => {
         socket.send(nickname);
-        document.getElementById("messages").innerHTML = "Connected to the room.<br>";
+        const messages = document.getElementById("messages");
+        const messageElement = document.createElement("div");
+        messageElement.className = "system-message";
+        messageElement.style.textAlign = "center"; // Center-align the message
+        messageElement.innerText = "Connected to the room.";
+        messages.appendChild(messageElement); // Ensure the message is appended to the chatbox
+        messages.scrollTop = messages.scrollHeight; // Scroll to the latest message
     };
 
     socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
         const messages = document.getElementById("messages");
         const messageElement = document.createElement("div");
-        const data = JSON.parse(event.data);
 
-        if (data.type === "join") {
-            messageElement.innerText = `🟢 ${data.nickname} joined the room.`;
-            messageElement.style.color = data.color;
-            messageElement.classList.add("system-message");
-        } else if (data.type === "leave") {
-            messageElement.innerText = `🔴 ${data.nickname} left the room.`;
-            messageElement.style.color = data.color;
-            messageElement.classList.add("system-message");
-        } else if (data.type === "message") {
+        if (data.type === "message") {
+            // Only append messages from other users or AI
+            if (!data.isAI && data.nickname === nickname) return;
+
+            messageElement.className = data.isAI ? "message ai-message" : "message";
             const senderSpan = document.createElement("span");
             senderSpan.style.color = data.color;
             senderSpan.style.fontWeight = "bold";
@@ -61,18 +63,27 @@ function connectToRoom() {
 
             messageElement.appendChild(senderSpan);
             messageElement.appendChild(messageSpan);
+        } else if (data.type === "join" || data.type === "leave") {
+            if (data.nickname === nickname && data.type === "join") return; // Prevent duplicate join message for the current user
+            messageElement.className = "system-message";
+            messageElement.style.textAlign = "center"; // Center-align the message
+            messageElement.innerText = data.type === "join"
+                ? `🟢 ${data.nickname} joined the room.`
+                : `🔴 ${data.nickname} left the room.`;
 
-            if (data.nickname === nickname) {
-                messageElement.classList.add("user");
-                messageElement.style.textAlign = "left";
-            } else {
-                messageElement.classList.add("other");
-                messageElement.style.textAlign = "right";
+            messages.appendChild(messageElement);
+            messages.scrollTop = messages.scrollHeight;
+
+            // Show prompt if only one user is present
+            if (data.isAlone) {
+                const chatbotPrompt = document.getElementById("chatbot-prompt");
+                chatbotPrompt.style.display = "block"; // Show the chatbot prompt
             }
+        } else if (data.type === "system" && data.showAiOption) {
+            // Handle system message with AI chat option
+            const chatbotPrompt = document.getElementById("chatbot-prompt");
+            chatbotPrompt.style.display = "block";
         }
-
-        messages.appendChild(messageElement);
-        messages.scrollTop = messages.scrollHeight;
     };
 
     socket.onclose = () => {
@@ -83,10 +94,19 @@ function connectToRoom() {
 
 function sendMessage() {
     const messageInput = document.getElementById("message-input");
-    const message = messageInput.value;
+    const message = messageInput.value.trim();
     if (message && socket) {
+        // Show the user's message in the chatbox
+        const messages = document.getElementById("messages");
+        const messageElement = document.createElement("div");
+        messageElement.className = "message user"; // Ensure it's styled as a user message
+        messageElement.innerText = message;
+        messages.appendChild(messageElement);
+
+        // Send the message to the server
         socket.send(message);
-        messageInput.value = "";
+        messageInput.value = ""; // Clear the input field
+        messages.scrollTop = messages.scrollHeight; // Scroll to the latest message
     }
 }
 
@@ -94,4 +114,13 @@ function leaveRoom() {
     if (socket) {
         socket.close();
     }
+}
+
+function redirectToAiChat() {
+    window.location.href = "/ai-chat";
+}
+
+function stayInRoom() {
+    const aiStatus = document.getElementById("ai-status");
+    aiStatus.style.display = "none";
 }
