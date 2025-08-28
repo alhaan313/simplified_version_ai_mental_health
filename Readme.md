@@ -2,7 +2,7 @@
 
 MindSentry Nova is an AI-powered mental health companion designed to enhance emotional well-being. It was developed as part of the Project-X Hackathon 2025.
 
----
+----
 
 ## Features
 
@@ -16,7 +16,7 @@ MindSentry Nova is an AI-powered mental health companion designed to enhance emo
 ### Upcoming Features
 - **Audio Room** – A group audio call feature with microphone toggling and visual indicators for active users. Participants can join via a meeting link and choose between chat or audio mode.
 
----
+----
 
 ## Technology Stack
 
